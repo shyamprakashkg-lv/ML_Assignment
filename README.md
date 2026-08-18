@@ -1,0 +1,101 @@
+# Telco Customer Churn Prediction
+
+## Problem Statement
+
+Customer churn (customers discontinuing service) directly affects recurring
+revenue for subscription-based telecom providers. This project frames churn
+prediction as a binary classification problem: given a customer's account,
+service, and billing attributes, predict whether the customer will churn
+(`Churn` = Yes/No). Five classification models are trained and compared on
+the same preprocessed dataset, and a Streamlit application is provided to
+upload held-out test data, run any of the trained models, and inspect its
+evaluation metrics interactively.
+
+## Dataset Description
+
+- Source: Telco Customer Churn dataset (`WA_FnUseC_TelcoCustomerChurn.csv`).
+- Instances: 7,043 customer records.
+- Features: 19 predictive columns after dropping the `customerID` identifier
+  (demographics such as gender and SeniorCitizen; account information such as
+  tenure and Contract type; billing fields such as MonthlyCharges and
+  TotalCharges; and subscribed services such as InternetService,
+  OnlineSecurity, and StreamingTV), satisfying the minimum feature and
+  instance size requirements for this assignment.
+- Target: `Churn` (Yes/No).
+- Preprocessing applied in `train.py`:
+  - `TotalCharges` is coerced to numeric (a small number of new customers
+    with zero tenure have blank values) and missing values are imputed with
+    the column median.
+  - All categorical columns, including `SeniorCitizen`, are label-encoded.
+  - `tenure`, `MonthlyCharges`, and `TotalCharges` are standardized with
+    `StandardScaler`.
+  - The data is split 80/20 into train and test sets with stratification on
+    `Churn`. The raw (pre-encoding) test split is saved as `test_data.csv`
+    for use in the Streamlit app.
+
+## Github Repository Link
+
+`https://github.com/shyamprakashkg-lv/ML_Assignment`
+
+## Models Used and Comparison Table
+
+All five models were trained on the same encoded and scaled training split
+and evaluated on the same held-out test split (1,409 records).
+
+| ML Model Name       | Accuracy | AUC    | Precision | Recall | F1     | MCC    |
+|----------------------|----------|--------|-----------|--------|--------|--------|
+| Logistic Regression  | 0.7999   | 0.8403 | 0.6447    | 0.5481 | 0.5925 | 0.4637 |
+| Decision Tree        | 0.7296   | 0.6611 | 0.4911    | 0.5160 | 0.5033 | 0.3178 |
+| kNN                  | 0.7594   | 0.7684 | 0.5499    | 0.5160 | 0.5324 | 0.3710 |
+| Naive Bayes          | 0.7466   | 0.8201 | 0.5160    | 0.7326 | 0.6055 | 0.4413 |
+| Random Forest (Ensemble) | 0.7878 | 0.8247 | 0.6298   | 0.4866 | 0.5490 | 0.4191 |
+
+## Observations
+
+| ML Model Name | Observation about model performance |
+|----------------|--------------------------------------|
+| Logistic Regression | Best overall balance of Accuracy, AUC, Precision, and MCC. The linear decision boundary generalizes well on this dataset, where churn correlates fairly linearly with tenure, contract type, and charges. |
+| Decision Tree | Weakest model across every metric, especially AUC (0.66). A single unconstrained tree overfits the training split and does not generalize; pruning or depth limits would likely help. |
+| kNN | Middling performance. Sensitive to feature scaling (mitigated here by StandardScaler) and to the curse of dimensionality from the many one-hot-style categorical features, which dilutes distance calculations. |
+| Naive Bayes | Lowest precision but by far the highest recall (0.7326) and highest F1. The independence assumption hurts precision, but it is the most effective model at catching actual churners, which matters for a retention use case where missing a churner is costlier than a false alarm. |
+| Random Forest (Ensemble) | Second best Accuracy and strong AUC, but recall is the lowest of all models (0.4866), meaning it misses more than half of actual churners despite being confident on the customers it does flag. |
+| **Overall Winner for your dataset** | **Logistic Regression** — it leads on 4 of the 6 metrics (Accuracy, AUC, Precision, MCC) and offers the most balanced trade-off between correctly identifying churners and avoiding false alarms. If the business priority is to minimize missed churners (maximize recall) over precision, Naive Bayes is the better operational choice. |
+
+## Project Structure
+
+```
+project-folder/
+|-- train.py
+|-- app.py
+|-- requirements.txt
+|-- README.md
+|-- test_data.csv
+|-- model/
+    |-- logistic_regression.joblib
+    |-- decision_tree.joblib
+    |-- knn.joblib
+    |-- naive_bayes.joblib
+    |-- random_forest.joblib
+    |-- scaler.joblib
+    |-- encoders.joblib
+    |-- target_encoder.joblib
+    |-- feature_columns.joblib
+    |-- numeric_columns.joblib
+```
+
+## Running Locally
+
+```
+pip install -r requirements.txt
+python train.py
+streamlit run app.py
+```
+
+## Deploying to Streamlit Community Cloud
+
+1. Push this project (including the `model/` directory generated by
+   `train.py`) to a GitHub repository.
+2. Go to https://streamlit.io/cloud and sign in with GitHub.
+3. Click "New App", select the repository and branch, and set the main file
+   to `app.py`.
+4. Click Deploy.
